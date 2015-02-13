@@ -1,6 +1,11 @@
 from datetime import *
 import time
 import _thread
+import os
+try:
+    import cPickle as pickle
+except:
+    import pickle
 
 try:
     from msvcrt import getch
@@ -50,34 +55,40 @@ class Seiyuu(object):
             self.birthdate = datetime(self.y,self.m,self.d,hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
         else:
             self.birthdate = datetime(year=1000,month=self.m,day=self.d,hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
-        self.count_remaining_days()
         if self.y is not None:
-            self.count_age()
+            self.is_age = 1
         else:
-            self.age = None
+            self.is_age = 0
         
-    def count_remaining_days(self):
+    def get_remaining_days(self):
         """Counts the number of days left until the birthday."""
         now = datetime.now()
-        self.remaining_days = self.birthdate.day - now.day 
+        date_now = date(now.year, now.month, now.day)
+        if now.month < self.birthdate.month or (now.month == self.birthdate.month and now.day < self.birthdate.day):
+            date_birthday = date(now.year, self.birthdate.month, self.birthdate.day)
+        else:
+            date_birthday = date(now.year + 1, self.birthdate.month, self.birthdate.day)
+        difference = date_birthday - date_now
+        return difference.days
 
-    def count_age(self):
+    def get_age(self):
         """Counts the age of the seiyuu."""
         now = datetime.now()
         if now.month < self.birthdate.month or (now.month == self.birthdate.month and now.day < self.birthdate.day):
-            self.age = now.year - self.birthdate.year
+            return now.year - self.birthdate.year
         else:
-            self.age = now.year - self.birthdate.year + 1
+            return now.year - self.birthdate.year + 1
         
     def __str__(self):
         """Default print method of the Seiyuu class."""
-        if self.age is not None:
-            return str(str(self.remaining_days) + " days left until " + self.name + "'s birthday! " + self.birthdate.strftime("%B") + " " + str(self.birthdate.day) + " turning " + str(self.age) + " years old.")
+        if self.is_age == 1:
+            return str(str(self.get_remaining_days()) + " days left until " + self.name + "'s birthday! " + self.birthdate.strftime("%B") + " " + str(self.birthdate.day) + " turning " + str(self.get_age()) + " years old.")
         else:
-            return str(str(self.remaining_days) + " days left until " + self.name + "'s birthday! " + self.birthdate.strftime("%B") + " " + str(self.birthdate.day) + ".")
+            return str(str(self.get_remaining_days()) + " days left until " + self.name + "'s birthday! " + self.birthdate.strftime("%B") + " " + str(self.birthdate.day) + ".")
 
 class Sorter(object):
-    """Class used for sorting seiyuu objects by the days remaining until their birthdays in ascending order.
+    """Class used for sorting seiyuu objects by the days remaining until their birthdays in ascending order
+    and printing the names of those whose birthdays are approaching.
 
     Attributes:
        seiyuu: A list of Seiyuu objects.
@@ -98,15 +109,19 @@ class Sorter(object):
 
     def sort_by_remaining_days(self):
         """Sorts the list of seiyuu by the number of days remaining until their birthdays in ascending order."""
-        self.seiyuu_objects.sort(key=lambda x: x.remaining_days, reverse=False)  
+        self.seiyuu_objects.sort(key=lambda x: x.get_remaining_days(), reverse=False)  
 
     def print_seiyuu_whose_birthday_is_within_x_days(self, days_left_threshold):
         """Prints the Seiyuu objects of seiyuu whose birthdays are closer than the defined threshold."""
+        printed_any = 0
         for s in self.seiyuu_objects:
-            if s.remaining_days > days_left_threshold:
+            if s.get_remaining_days() > days_left_threshold:
                 break
             else:
                 print(s)
+                printed_any = 1
+        if printed_any == 0:
+            print("There is not any seiyuu in your selection who celebrates his/her birthday within " + str(days_left_threshold) + " days.")
 
 def read_database():
     """Reads the database file and stores all entries in a dictionary."""
@@ -153,15 +168,40 @@ def instantiate_seiyuu_objects(seiyuu_list):
             seiyuu_objects.append(s)
     return seiyuu_objects
 
+def hash_seiyuu_names():
+    """Returns a hashcode of the text in the user's list of seiyuu"""
+    with open("seiyuu_list.txt", mode='r', encoding='utf-8') as own_list:
+        list_content = own_list.read()
+    return hash(list_content)
+
 def main():      
-    """Calls methods to read the database and the user file with a list of seiyuu,
-    calls a method to create the objects of Seiyuu class for each seiyuu,
-    creates an object of the Sorter class to sort the seiyuu by the days remaining
+    """Tries to open generated serialized object file and the hashcode file of user's list.
+    If the files are not available or the stored hashcode does not match the current hashcode
+    of user's list, it calls methods to read the database and the user file with a list of seiyuu,
+    and calls a method to create the objects of Seiyuu class for each seiyuu, and then serializes
+    the objects in a file and saves the new hashcode.
+    Then, it creates an object of the Sorter class to sort the seiyuu by the days remaining
     until their birthdays and print those whose birthdays are close, and tells
     the user to exit by pressing any key."""
-    seiyuu_database = read_database()
-    seiyuu_list = read_own_list(seiyuu_database)
-    seiyuu_objects = instantiate_seiyuu_objects(seiyuu_list)
+    no_generated_data = 0
+    if os.path.isfile('seiyuu_o.pkl') and os.path.isfile('sl_hsh'):
+        with open('seiyuu_o.pkl', 'rb') as obj_file:
+            seiyuu_objects = pickle.load(obj_file)
+        idhash = 0
+        with open('sl_hsh', 'r', encoding='utf-8') as hash_file:
+            content = hash_file.read().splitlines()
+            idhash = content[0]
+    else:
+        no_generated_data = 1
+    if no_generated_data == 1 or idhash != str(hash_seiyuu_names()):
+        seiyuu_database = read_database()
+        seiyuu_list = read_own_list(seiyuu_database)
+        seiyuu_objects = instantiate_seiyuu_objects(seiyuu_list)
+        idhash = hash_seiyuu_names()
+        with open('sl_hsh', 'w', encoding='utf-8') as hash_file:
+            hash_file.write(str(idhash))
+        with open('seiyuu_o.pkl', 'wb') as obj_file:
+            pickle.dump(seiyuu_objects, obj_file)
     # Variable defining the threshold of number of days left until the birthday 
     # from which to remind of the approaching birthday.
     days_left_threshold = 15
