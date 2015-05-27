@@ -1,11 +1,29 @@
 from datetime import *
 import time
-import _thread
+try:
+    import thread as _thread
+except:
+    import _thread
 import os
 try:
     import cPickle as pickle
 except:
     import pickle
+import sys
+
+if sys.version_info[0] > 2:
+    pass
+else:
+    import codecs
+    def open(file, mode='r', buffering=-1, encoding=None, errors=None, newline=None, closefd=True, opener=None):
+        if newline is not None:
+            warnings.warn('newline is not supported in py2')
+        if not closefd:
+            warnings.warn('closefd is not supported in py2')
+        if opener is not None:
+            warnings.warn('opener is not supported in py2')
+        return codecs.open(filename=file, mode=mode, encoding=encoding,
+                    errors=errors, buffering=buffering)
 
 try:
     from msvcrt import getch
