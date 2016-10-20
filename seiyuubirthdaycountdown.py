@@ -54,7 +54,12 @@ class Seiyuu(object):
     whose birthdays are approaching.
 
     Attributes:
-        name: A string containing the name of a seiyuu.
+        surname_k: A string containing the surname of a seiyuu in kanji.
+        fname_k: A string containing the first name of a seiyuu in kanji.
+        surname_y: A string containing the surname of a seiyuu in kana.
+        fname_y: A string containing the first name of a seiyuu in kana.
+        surname_r: A string containing the surname of a seiyuu in romaji.
+        fname_r: A string containing the name of a seiyuu in romaji.
         y: An integer representing the year of birth of a seiyuu.
         m: An integer representing the month of birth of a seiyuu.
         d: An integer representing the day of birth of a seiyuu.
@@ -63,9 +68,14 @@ class Seiyuu(object):
         remaining_days: An integer representing the number of days left until the birthday of a seiyuu.
     """
 
-    def __init__(self,name,y,m,d):
+    def __init__(self,surname_k,fname_k,surname_y,fname_y,surname_r,fname_r,y,m,d):
         """Instantiates an object of the Seiyuu class."""
-        self.name = name
+        self.surname_k = surname_k
+        self.fname_k = fname_k
+        self.surname_y = surname_y
+        self.fname_y = fname_y
+        self.surname_r = surname_r
+        self.fname_r = fname_r
         self.y = y
         self.m = m
         self.d = d
@@ -100,9 +110,9 @@ class Seiyuu(object):
     def __str__(self):
         """Default print method of the Seiyuu class."""
         if self.is_age == 1:
-            return str(str(self.get_remaining_days()) + " days left until " + self.name + "'s birthday! " + self.birthdate.strftime("%B") + " " + str(self.birthdate.day) + " turning " + str(self.get_age()) + " years old.")
+            return str(str(self.get_remaining_days()) + " days left until " + self.surname_r + " " + self.fname_r + "'s birthday! " + self.birthdate.strftime("%B") + " " + str(self.birthdate.day) + " turning " + str(self.get_age()) + " years old.")
         else:
-            return str(str(self.get_remaining_days()) + " days left until " + self.name + "'s birthday! " + self.birthdate.strftime("%B") + " " + str(self.birthdate.day) + ".")
+            return str(str(self.get_remaining_days()) + " days left until " + self.surname_r + " " + self.fname_r + "'s birthday! " + self.birthdate.strftime("%B") + " " + str(self.birthdate.day) + ".")
 
 class Sorter(object):
     """Class used for sorting seiyuu objects by the days remaining until their birthdays in ascending order
@@ -143,11 +153,12 @@ class Sorter(object):
 
 def read_database():
     """Reads the database file and stores all entries in a dictionary."""
-    database = open("seiyuu_database.csv", mode='r', encoding='utf-8')
+    database = open("database.csv", mode='r', encoding='utf-8')
     seiyuu_database = {};
     for line in database:
         seiyuu = line.strip().split(",")
         seiyuu_database[seiyuu[0] + " " + seiyuu[1]] = seiyuu
+        seiyuu_database[seiyuu[4] + " " + seiyuu[5]] = seiyuu
     database.close()
     return seiyuu_database
 
@@ -166,7 +177,11 @@ def read_own_list(seiyuu_database):
             seiyuu = seiyuu_database[name[0] + " " + name[1]]
             seiyuu_list.append(seiyuu)
         except KeyError:
-        	pass
+            try:
+                seiyuu = seiyuu_database[name[0] + " " + name[1]]
+                seiyuu_list.append(seiyuu)
+            except KeyError:
+                pass
     own_list.close()
     return seiyuu_list
 
@@ -178,11 +193,11 @@ def instantiate_seiyuu_objects(seiyuu_list):
     """
     seiyuu_objects = []
     for seiyuu in seiyuu_list:
-        if seiyuu[2] is not '':
-            s = Seiyuu(seiyuu[0] + " " + seiyuu[1], int(seiyuu[2]), int(seiyuu[3]), int(seiyuu[4]))
+        if seiyuu[6] is not '':
+            s = Seiyuu(seiyuu[0], seiyuu[1], seiyuu[2], seiyuu[3], seiyuu[4], seiyuu[5], int(seiyuu[6]), int(seiyuu[7]), int(seiyuu[8]))
             seiyuu_objects.append(s)
         else:
-            s = Seiyuu(seiyuu[0] + " " + seiyuu[1], None, int(seiyuu[3]), int(seiyuu[4]))
+            s = Seiyuu(seiyuu[0], seiyuu[1], seiyuu[2], seiyuu[3], seiyuu[4], seiyuu[5], None, int(seiyuu[7]), int(seiyuu[8]))
             seiyuu_objects.append(s)
     return seiyuu_objects
 
